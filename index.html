@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover">
-<title>OP·TCG Builder v2.1.3</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>OP·TCG Builder v2.2.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
@@ -267,7 +270,7 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Noto Sa
 </div>
 
 <header class="hd">
-  <div class="logo" onclick="resetToSearch()" style="cursor:pointer;touch-action:manipulation"><span>OP</span>·TCG BUILDER <span style="font-size:9px;color:var(--txt3);font-weight:400;letter-spacing:0">v2.1.3</span></div>
+  <div class="logo" onclick="resetToSearch()" style="cursor:pointer;touch-action:manipulation"><span>OP</span>·TCG BUILDER <span style="font-size:9px;color:var(--txt3);font-weight:400;letter-spacing:0">v2.2.0</span></div>
   <button class="hbtn" id="hUnlockBtn" onclick="toggleUnlock()" title="枚数制限解除" style="display:none;font-size:18px">🔒</button>
   <button class="hbtn" id="hDkBtn" onclick="openMDk()" title="デッキ" style="display:none">
     🃏<span class="hbdg v" id="hDkBdg">0</span>
@@ -572,7 +575,7 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Noto Sa
 
 <script>
 // ════════════════════════════════════════════════════════
-// OP·TCG BUILDER v2.1.3 — IndexedDB対応
+// OP·TCG BUILDER v2.2.0 — IndexedDB対応
 // DB: optcg_db v1
 //   stores: cards(keyPath:id), decks(keyPath:id), ui(keyPath:key)
 // ════════════════════════════════════════════════════════
@@ -1240,19 +1243,43 @@ function renderMdkBody(){
   const c=document.getElementById('mdkCnt');if(c)c.textContent=`${tot}/50`;
   const entries=Object.entries(deck);
   if(!entries.length){b.innerHTML='<div class="empty"><div class="emico">🃏</div><div class="emtxt">デッキが空です</div></div>';return;}
+  // 統計集計
+  const cc={},cm={};let ctrTot=0,charCnt=0,evCnt=0,stCnt=0;
+  for(let i=0;i<=10;i++)cm[i]=0;
+  entries.forEach(([id,cnt])=>{
+    const c=all.find(x=>x.id===id);if(!c)return;
+    (c.colors||[c.color]).forEach(col=>{cc[col]=(cc[col]||0)+cnt;});
+    cm[Math.min(c.cost||0,10)]+=cnt;
+    ctrTot+=(c.counter||0)*cnt;
+    if(c.type==='キャラ')charCnt+=cnt;
+    else if(c.type==='イベント')evCnt+=cnt;
+    else if(c.type==='ステージ')stCnt+=cnt;
+  });
+  const ctSum=Object.values(cc).reduce((s,v)=>s+v,0)||1;
+  const cmMax=Math.max(...Object.values(cm),1);
+  const colorBar=Object.entries(cc).map(([col,n])=>`<div style="height:100%;width:${(n/ctSum*100).toFixed(1)}%;background:${CM[col]||'#888'}"></div>`).join('');
+  const costBars=Object.entries(cm).map(([k,v])=>`<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:2px"><div style="background:var(--gold);border-radius:2px;width:100%;height:${Math.round((v/cmMax)*32)+(v?2:0)}px"></div><div style="font-size:8px;color:${v?'var(--txt2)':'var(--txt3)'};font-weight:${v?'700':'400'}">${k}</div></div>`).join('');
   const typeOrder={キャラ:0,イベント:1,ステージ:2};
   const sorted=[...entries].sort(([aid],[bid])=>{
     const ca=all.find(x=>x.id===aid),cb=all.find(x=>x.id===bid);
     const to=(typeOrder[ca?.type??'']??3)-(typeOrder[cb?.type??'']??3);
     return to!==0?to:(ca?.cost??0)-(cb?.cost??0);
   });
-  b.innerHTML=sorted.map(([id,cnt])=>{const c=all.find(x=>x.id===id);if(!c)return'';
+  // タイプ別ヘッダー
+  let lastType=null;
+  const cardRows=sorted.map(([id,cnt])=>{const c=all.find(x=>x.id===id);if(!c)return'';
     const eid=esc(c.id);
-    return`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--brd)">
-      <div style="width:32px;height:44px;border-radius:5px;overflow:hidden;background:var(--sur2);flex-shrink:0">${c.image?`<img src="${c.image}" style="width:100%;height:100%;object-fit:cover">`:''}</div>
-      <div style="flex:1;min-width:0">
+    let header='';
+    if(c.type!==lastType){
+      lastType=c.type;
+      const tn=c.type==='キャラ'?charCnt:c.type==='イベント'?evCnt:stCnt;
+      header=`<div style="padding:8px 0 4px;font-size:9px;font-weight:900;letter-spacing:1px;color:var(--gold)">${c.type} <span style="color:var(--txt3);font-weight:400">${tn}枚</span></div>`;
+    }
+    return header+`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--brd)">
+      <div data-mdk-open="${eid}" style="width:32px;height:44px;border-radius:5px;overflow:hidden;background:var(--sur2);flex-shrink:0;cursor:pointer">${c.image?`<img src="${c.image}" style="width:100%;height:100%;object-fit:cover">`:''}</div>
+      <div style="flex:1;min-width:0;cursor:pointer" data-mdk-open="${eid}">
         <div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div>
-        <div style="font-size:10px;color:var(--txt3);margin-top:1px">${c.type}${c.cost!=null&&c.type!=='リーダー'?' · C'+c.cost:''}</div>
+        <div style="font-size:10px;color:var(--txt3);margin-top:1px">${c.cost!=null&&c.type!=='リーダー'?'C'+c.cost:''}${c.power?' · '+c.power.toLocaleString():''}${c.counter?' · CT'+c.counter:''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
         <button class="dlqb" data-mdk-action="rm" data-mdk-id="${eid}" style="background:rgba(239,68,68,.15);color:#ef4444">－</button>
@@ -1260,6 +1287,20 @@ function renderMdkBody(){
         <button class="dlqb" data-mdk-action="add" data-mdk-id="${eid}" style="background:rgba(232,162,0,.15);color:var(--gold)">＋</button>
       </div></div>`;
   }).join('');
+  b.innerHTML=`
+    <div style="padding:6px 0 12px;border-bottom:1px solid var(--brd);margin-bottom:4px">
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <div style="flex:1;background:var(--sur2);border-radius:8px;padding:6px;text-align:center"><div style="font-size:14px;font-weight:900;color:var(--gold)">${charCnt}</div><div style="font-size:8px;color:var(--txt3)">キャラ</div></div>
+        <div style="flex:1;background:var(--sur2);border-radius:8px;padding:6px;text-align:center"><div style="font-size:14px;font-weight:900;color:var(--gold)">${evCnt}</div><div style="font-size:8px;color:var(--txt3)">イベント</div></div>
+        <div style="flex:1;background:var(--sur2);border-radius:8px;padding:6px;text-align:center"><div style="font-size:14px;font-weight:900;color:var(--gold)">${stCnt}</div><div style="font-size:8px;color:var(--txt3)">ステージ</div></div>
+        <div style="flex:1;background:var(--sur2);border-radius:8px;padding:6px;text-align:center"><div style="font-size:14px;font-weight:900;color:var(--gold)">${ctrTot.toLocaleString()}</div><div style="font-size:8px;color:var(--txt3)">CT合計</div></div>
+      </div>
+      <div style="font-size:9px;color:var(--txt3);margin-bottom:3px">カラー</div>
+      <div style="height:6px;border-radius:3px;overflow:hidden;display:flex;background:var(--sur3);margin-bottom:8px">${colorBar}</div>
+      <div style="font-size:9px;color:var(--txt3);margin-bottom:3px">コスト分布</div>
+      <div style="display:flex;gap:3px;align-items:flex-end;height:42px">${costBars}</div>
+    </div>
+    ${cardRows}`;
   b.querySelectorAll('[data-mdk-action]').forEach(el=>{
     let fired=false;
     el.addEventListener('touchend',e=>{
@@ -1270,6 +1311,16 @@ function renderMdkBody(){
     el.addEventListener('click',()=>{
       if(fired)return;
       el.dataset.mdkAction==='add'?mdkAdd(el.dataset.mdkId):rmCard(el.dataset.mdkId);
+    });
+  });
+  b.querySelectorAll('[data-mdk-open]').forEach(el=>{
+    let fired=false;
+    el.addEventListener('touchend',e=>{
+      if(fired)return;fired=true;setTimeout(()=>fired=false,400);
+      e.preventDefault();e.stopPropagation();openCard(el.dataset.mdkOpen);
+    },{passive:false});
+    el.addEventListener('click',e=>{
+      if(fired)return;e.stopPropagation();openCard(el.dataset.mdkOpen);
     });
   });
 }
