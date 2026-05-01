@@ -1247,6 +1247,7 @@ function renderMdkBody(){
     return to!==0?to:(ca?.cost??0)-(cb?.cost??0);
   });
   b.innerHTML=sorted.map(([id,cnt])=>{const c=all.find(x=>x.id===id);if(!c)return'';
+    const eid=esc(c.id);
     return`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--brd)">
       <div style="width:32px;height:44px;border-radius:5px;overflow:hidden;background:var(--sur2);flex-shrink:0">${c.image?`<img src="${c.image}" style="width:100%;height:100%;object-fit:cover">`:''}</div>
       <div style="flex:1;min-width:0">
@@ -1254,11 +1255,23 @@ function renderMdkBody(){
         <div style="font-size:10px;color:var(--txt3);margin-top:1px">${c.type}${c.cost!=null&&c.type!=='リーダー'?' · C'+c.cost:''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-        <button class="dlqb" onclick="rmCard('${c.id}')" style="background:rgba(239,68,68,.15);color:#ef4444">－</button>
+        <button class="dlqb" data-mdk-action="rm" data-mdk-id="${eid}" style="background:rgba(239,68,68,.15);color:#ef4444">－</button>
         <span style="font-size:14px;font-weight:900;min-width:20px;text-align:center">${cnt}</span>
-        <button class="dlqb" onclick="mdkAdd('${c.id}')" style="background:rgba(232,162,0,.15);color:var(--gold)">＋</button>
+        <button class="dlqb" data-mdk-action="add" data-mdk-id="${eid}" style="background:rgba(232,162,0,.15);color:var(--gold)">＋</button>
       </div></div>`;
   }).join('');
+  b.querySelectorAll('[data-mdk-action]').forEach(el=>{
+    let fired=false;
+    el.addEventListener('touchend',e=>{
+      e.preventDefault();e.stopPropagation();
+      if(fired)return;fired=true;setTimeout(()=>fired=false,400);
+      el.dataset.mdkAction==='add'?mdkAdd(el.dataset.mdkId):rmCard(el.dataset.mdkId);
+    },{passive:false});
+    el.addEventListener('click',()=>{
+      if(fired)return;
+      el.dataset.mdkAction==='add'?mdkAdd(el.dataset.mdkId):rmCard(el.dataset.mdkId);
+    });
+  });
 }
 
 // ════════ REGISTER ════════
