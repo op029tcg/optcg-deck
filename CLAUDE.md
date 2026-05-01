@@ -28,7 +28,15 @@ grep -n "v2\." index.html
 # Edit ツールで replace_all:true を使う
 ```
 
-## ブランチ
+## ブランチ・デプロイ
 
 - 開発ブランチ: `claude/explore-features-p2QaY`
 - 変更後は必ず commit & push すること
+- **GitHub Pages は `main` ブランチを参照しているため、変更後は必ず `main` にもマージすること**
+
+```bash
+git checkout main
+git merge claude/explore-features-p2QaY --no-edit
+git push origin main
+git checkout claude/explore-features-p2QaY
+```
