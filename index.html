@@ -152,7 +152,7 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Noto Sa
 .dlthumb img{width:100%;height:100%;object-fit:cover}
 .dlname{flex:1;font-size:10px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .dlqty{display:flex;align-items:center;gap:3px;flex-shrink:0}
-.dlqb{width:18px;height:18px;border-radius:50%;background:var(--sur3);border:none;color:var(--txt);font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.dlqb{width:32px;height:32px;border-radius:50%;background:var(--sur3);border:none;color:var(--txt);font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .dlnum{font-size:11px;font-weight:900;min-width:14px;text-align:center}
 .dsavebar{padding:4px 10px;border-top:1px solid var(--brd);display:flex;gap:5px;flex-shrink:0;background:var(--bg);align-items:center}
 .btnd{background:var(--sur2);color:var(--txt2);border:1px solid var(--brd2);width:34px;flex:none}
@@ -980,6 +980,7 @@ function addCard(id){
   const b=document.getElementById('tbDkBdg');if(b){b.textContent=tot;b.classList.toggle('v',tot>0);}
   const hb=document.getElementById('hDkBdg');if(hb){hb.textContent=tot;hb.classList.toggle('v',tot>0);}
   const mk=document.getElementById('mdkBdg');if(mk)mk.textContent=tot;
+  if(document.getElementById('mdkDrw')?.classList.contains('open'))renderMdkBody();
 }
 function rmCard(id){if(!deck[id])return;deck[id]--;if(deck[id]<=0)delete deck[id];updDkAll();doBuildSearch();}
 async function clrDeck(){if(!await customConfirm('デッキをクリアしますか？','クリアする'))return;deck={};updDkAll();doBuildSearch();}
@@ -1222,19 +1223,40 @@ async function copyDeck(deckId){
 // ════════ MOBILE DECK DRAWER ════════
 function openMDk(){renderMdkBody();document.getElementById('mdkOv')?.classList.add('open');document.getElementById('mdkDrw')?.classList.add('open');}
 function closeMDk(){document.getElementById('mdkOv')?.classList.remove('open');document.getElementById('mdkDrw')?.classList.remove('open');}
+function mdkAdd(id){
+  const cur=deck[id]||0;
+  const base=id.replace(/[★]+$|SP$/,'');
+  const sameO=Object.entries(deck).filter(([k])=>k!==id&&k.replace(/[★]+$|SP$/,'')==base).reduce((s,[,n])=>s+n,0);
+  const max=unlocked?9999:Math.min(4,4-sameO);
+  const deckMax=unlocked?9999:50;
+  if(cur>=max){toast(`同名カードは${max}枚までです`);return;}
+  if(Object.values(deck).reduce((s,n)=>s+n,0)>=deckMax){toast(`デッキは${deckMax}枚までです`);return;}
+  deck[id]=(cur||0)+1;
+  updDkAll();
+}
 function renderMdkBody(){
   const all=getAllCards(),b=document.getElementById('mdkBody');if(!b)return;
-  const c=document.getElementById('mdkCnt');if(c)c.textContent=`${Object.values(deck).reduce((s,n)=>s+n,0)}/50`;
+  const tot=Object.values(deck).reduce((s,n)=>s+n,0);
+  const c=document.getElementById('mdkCnt');if(c)c.textContent=`${tot}/50`;
   const entries=Object.entries(deck);
   if(!entries.length){b.innerHTML='<div class="empty"><div class="emico">🃏</div><div class="emtxt">デッキが空です</div></div>';return;}
-  b.innerHTML=entries.map(([id,cnt])=>{const c=all.find(x=>x.id===id);if(!c)return'';
-    return`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--brd)">
-      <div style="width:28px;height:38px;border-radius:4px;overflow:hidden;background:var(--sur2);display:flex;align-items:center;justify-content:center;flex-shrink:0">${c.image?`<img src="${c.image}" style="width:100%;height:100%;object-fit:cover">`:''}</div>
-      <div style="flex:1;font-size:12px">${c.name}</div>
-      <div style="display:flex;align-items:center;gap:4px">
-        <button class="dlqb" onclick="rmCard('${c.id}')">－</button>
-        <span style="font-size:12px;font-weight:900;min-width:16px;text-align:center">${cnt}</span>
-        <button class="dlqb" onclick="addCard('${c.id}')">＋</button>
+  const typeOrder={キャラ:0,イベント:1,ステージ:2};
+  const sorted=[...entries].sort(([aid],[bid])=>{
+    const ca=all.find(x=>x.id===aid),cb=all.find(x=>x.id===bid);
+    const to=(typeOrder[ca?.type??'']??3)-(typeOrder[cb?.type??'']??3);
+    return to!==0?to:(ca?.cost??0)-(cb?.cost??0);
+  });
+  b.innerHTML=sorted.map(([id,cnt])=>{const c=all.find(x=>x.id===id);if(!c)return'';
+    return`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--brd)">
+      <div style="width:32px;height:44px;border-radius:5px;overflow:hidden;background:var(--sur2);flex-shrink:0">${c.image?`<img src="${c.image}" style="width:100%;height:100%;object-fit:cover">`:''}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div>
+        <div style="font-size:10px;color:var(--txt3);margin-top:1px">${c.type}${c.cost!=null&&c.type!=='リーダー'?' · C'+c.cost:''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <button class="dlqb" onclick="rmCard('${c.id}')" style="background:rgba(239,68,68,.15);color:#ef4444">－</button>
+        <span style="font-size:14px;font-weight:900;min-width:20px;text-align:center">${cnt}</span>
+        <button class="dlqb" onclick="mdkAdd('${c.id}')" style="background:rgba(232,162,0,.15);color:var(--gold)">＋</button>
       </div></div>`;
   }).join('');
 }
