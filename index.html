@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover">
-<title>OP·TCG Builder v2.1.0</title>
+<title>OP·TCG Builder v2.1.2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
@@ -311,9 +311,10 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Noto Sa
     </div>
     <div id="stepCards" style="display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden">
       <div class="dthumbs" id="dThumbs"></div>
+      <div style="height:3px;background:var(--sur3);flex-shrink:0"><div id="dPF" class="dprogf" style="width:0%"></div></div>
       <div class="dcsbar">
         <input class="sinp" id="dcQ" type="text" placeholder="カードを検索…" oninput="doBuildSearch()" autocomplete="off" spellcheck="false">
-        <div class="dcnt"><span id="dPN">0</span><span style="font-size:9px;color:var(--txt2);font-weight:400"> / 50</span></div>
+        <div class="dcnt"><span id="dPN">0</span><span style="font-size:9px;color:var(--txt2);font-weight:400"> / 50</span><span id="dPMsg" style="font-size:9px;color:var(--txt3);font-weight:400;margin-left:4px"></span></div>
         <button class="fbtn" onclick="openFD2()">⚙<span class="fbdg" id="fBdg2"></span></button>
       </div>
       <div class="dpanel">
@@ -571,7 +572,7 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Noto Sa
 
 <script>
 // ════════════════════════════════════════════════════════
-// OP·TCG BUILDER v2.1.0 — IndexedDB対応
+// OP·TCG BUILDER v2.1.2 — IndexedDB対応
 // DB: optcg_db v1
 //   stores: cards(keyPath:id), decks(keyPath:id), ui(keyPath:key)
 // ════════════════════════════════════════════════════════
@@ -581,8 +582,6 @@ const CM={赤:'#ef4444',青:'#3b82f6',緑:'#22c55e',黄:'#f59e0b',紫:'#a855f7',
 // kana normalize
 function toHira(str){return str.replace(/[\u30A1-\u30F6]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0x60));}
 function norm(str){return toHira((str||'').toLowerCase());}
-
-const CARDS=[];
 
 // ════════ IndexedDB層 ════════
 const DB_NAME='optcg_db', DB_VER=1;
@@ -643,7 +642,7 @@ function dbPutBatch(st,items,onProg){
 
 // ════════ キャッシュ ════════
 let _cards=[], _decks=[];
-function getAllCards(){return[...CARDS,..._cards];}
+function getAllCards(){return[..._cards];}
 
 // ════════ localStorageマイグレーション ════════
 async function migrateLegacy(onMsg){
@@ -772,13 +771,12 @@ function goStep(n){
   });
   const sl=document.getElementById('stepLeader'),sc=document.getElementById('stepCards');
   if(n===1){if(sl)sl.style.display='';if(sc)sc.style.display='none';renderLeaders();}
-  else{if(sl)sl.style.display='none';if(sc){sc.style.display='flex';sc.style.flexDirection='column';}updDThumbs();doBuildSearch();updDkPanel();}
+  else{if(sl)sl.style.display='none';if(sc){sc.style.display='flex';sc.style.flexDirection='column';}updDThumbs();doBuildSearch();}
 }
-function backToLeader(){
-  // カード追加中のみ確認ダイアログ（ステップ1は常にOK）
+async function backToLeader(){
   const tot=Object.values(deck).reduce((s,n)=>s+n,0);
   if(tot>0&&leader){
-    if(!confirm('リーダー選択に戻りますか？\n（追加済みのカードはリセットされます）'))return;
+    if(!await customConfirm('リーダー選択に戻りますか？\n（追加済みのカードはリセットされます）','戻る'))return;
     deck={};updDkAll();
   }
   leader=null;goStep(1);
@@ -791,12 +789,12 @@ function renderLeaders(){
     <div class="loptico">${c.image?`<img src="${c.image}" alt="">`:'<div style="width:100%;height:100%;background:linear-gradient(135deg,var(--sur2),var(--sur3))"></div>'}</div>
   </div>`).join('');
 }
-function selLeader(id){
+async function selLeader(id){
   const all=getAllCards(),c=all.find(x=>x.id===id);if(!c)return;
   if(leader&&leader.id!==id){
     const lc=c.colors||[c.color];
     const bad=Object.keys(deck).filter(did=>{const d=all.find(x=>x.id===did);return d&&!(d.colors||[d.color]).some(col=>lc.includes(col));});
-    if(bad.length&&!confirm(`リーダー変更により${bad.length}枚が除外されます。続けますか？`))return;
+    if(bad.length&&!await customConfirm(`リーダー変更により${bad.length}枚が除外されます。続けますか？`,'変更する'))return;
     bad.forEach(did=>delete deck[did]);
   }
   leader=c;
@@ -984,7 +982,7 @@ function addCard(id){
   const mk=document.getElementById('mdkBdg');if(mk)mk.textContent=tot;
 }
 function rmCard(id){if(!deck[id])return;deck[id]--;if(deck[id]<=0)delete deck[id];updDkAll();doBuildSearch();}
-function clrDeck(){if(!confirm('デッキをクリアしますか？'))return;deck={};updDkAll();doBuildSearch();}
+async function clrDeck(){if(!await customConfirm('デッキをクリアしますか？','クリアする'))return;deck={};updDkAll();doBuildSearch();}
 function updDkAll(){
   const tot=Object.values(deck).reduce((s,n)=>s+n,0);
   const pct=Math.min(100,(tot/50)*100);
@@ -994,36 +992,8 @@ function updDkAll(){
   const b=document.getElementById('tbDkBdg');if(b){b.textContent=tot;b.classList.toggle('v',tot>0);}
   const hb=document.getElementById('hDkBdg');if(hb){hb.textContent=tot;hb.classList.toggle('v',tot>0);}
   const mk=document.getElementById('mdkBdg');if(mk)mk.textContent=tot;
-  updDkPanel();updDThumbs();
+  updDThumbs();
   if(document.getElementById('mdkDrw')?.classList.contains('open'))renderMdkBody();
-}
-function updDkPanel(){
-  const all=getAllCards(),b=document.getElementById('dListBody');if(!b)return;
-  const entries=Object.entries(deck);
-  if(!entries.length){b.innerHTML='<div style="padding:16px;font-size:11px;color:var(--txt3);text-align:center">まだカードがありません</div>';return;}
-  // タイプ優先順: キャラ→イベント→ステージ、同タイプ内はコスト昇順
-  const typeOrder={キャラ:0,イベント:1,ステージ:2};
-  const sorted=[...entries].sort(([aid],[bid])=>{
-    const ca=all.find(x=>x.id===aid),cb=all.find(x=>x.id===bid);
-    if(!ca||!cb)return 0;
-    const to=(typeOrder[ca.type]??3)-(typeOrder[cb.type]??3);
-    if(to!==0)return to;
-    return(ca.cost||0)-(cb.cost||0);
-  });
-  // タイプ別にセクションヘッダーを挿入
-  let lastType=null;
-  const rows=sorted.map(([id,cnt])=>{
-    const c=all.find(x=>x.id===id);if(!c)return'';
-    let header='';
-    if(c.type!==lastType){
-      lastType=c.type;
-      const typeTot=sorted.filter(([sid])=>{const sc=all.find(x=>x.id===sid);return sc?.type===c.type;}).reduce((s,[,n])=>s+n,0);
-      header=`<div style="padding:6px 10px 3px;font-size:9px;font-weight:900;letter-spacing:1px;color:var(--gold);border-top:1px solid var(--brd);background:var(--bg)">${c.type} <span style="color:var(--txt3);font-weight:400">${typeTot}枚</span></div>`;
-    }
-    return header+`<div class="dlrow"><div class="dlthumb">${c.image?`<img src="${c.image}" alt="">`:''}</div><div class="dlname">${c.name}</div>
-    <div class="dlqty"><button class="dlqb" onclick="rmCard('${c.id}')">－</button><span class="dlnum">${cnt}</span><button class="dlqb" onclick="addCard('${c.id}')">＋</button></div></div>`;
-  }).join('');
-  b.innerHTML=rows;
 }
 // ════════ CUSTOM PROMPT (prompt()代替・iOS Safari対応) ════════
 let _cpResolve=null;
@@ -1041,10 +1011,11 @@ function customPrompt(title,defaultVal){
     inp.onkeydown=e=>{if(e.key==='Enter')customPromptOk();if(e.key==='Escape')customPromptCancel();};
   });
 }
-function customConfirm(msg){
+function customConfirm(msg,okLabel='削除する'){
   return new Promise(resolve=>{
     const mod=document.getElementById('customConfirmMod');
     document.getElementById('ccMsg').textContent=msg;
+    document.getElementById('ccOkBtn').textContent=okLabel;
     mod.style.display='';mod.classList.add('open');
     document.getElementById('ccOkBtn').onclick=()=>{mod.classList.remove('open');mod.style.display='none';resolve(true);};
     document.getElementById('ccCancelBtn').onclick=()=>{mod.classList.remove('open');mod.style.display='none';resolve(false);};
@@ -1175,7 +1146,7 @@ function loadDeck(deckId){
   toast(`「${d.name}」を読み込みました`);
 }
 async function delDeck(deckId){
-  if(!confirm('削除しますか？'))return;
+  if(!await customConfirm('デッキを削除しますか？'))return;
   try{await dbDel('decks',deckId);_decks=await dbGetAll('decks');renderSaved();toast('削除しました');}
   catch(e){toast('❌ 削除エラー');}
 }
@@ -1322,7 +1293,7 @@ async function scanAI(){
   const as=document.getElementById('aiStep');if(as)as.textContent='AIに送信中…';
   const b64=cardImg.split(',')[1],mt=cardImg.split(';')[0].split(':')[1]||'image/jpeg';
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:mt,data:b64}},{type:'text',text:'このワンピースカードゲームのカード情報をJSONのみで返してください。フィールド: name, type(キャラ/リーダー/イベント/ステージ), color(赤/青/緑/黄/紫/黒), colors(配列), cost(数値), power(数値), counter(数値), rarity, id(カード番号), trait, effect'}]}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','x-api-key':localStorage.getItem('anthropic_api_key')||''},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:mt,data:b64}},{type:'text',text:'このワンピースカードゲームのカード情報をJSONのみで返してください。フィールド: name, type(キャラ/リーダー/イベント/ステージ), color(赤/青/緑/黄/紫/黒), colors(配列), cost(数値), power(数値), counter(数値), rarity, id(カード番号), trait, effect'}]}]})});
     if(as)as.textContent='解析中…';
     const data=await res.json();
     const txt=(data.content||[]).find(b=>b.type==='text')?.text||'';
@@ -1347,7 +1318,7 @@ async function submitCard(){
   if(!rColors.length){toast('色を選択してください');return;}
   const id=no;
   const exIdx=_cards.findIndex(c=>c.id===id);
-  if(!editId&&exIdx>=0&&!confirm(`ID "${id}" は既に存在します。上書きしますか？`))return;
+  if(!editId&&exIdx>=0&&!await customConfirm(`ID "${id}" は既に存在します。上書きしますか？`,'上書きする'))return;
   const nc={
     id,name,type:rType,color:rColors[0],colors:[...rColors],
     cost:parseInt(document.getElementById('rCost')?.value)||rStats.cost||0,
@@ -1371,6 +1342,7 @@ async function submitCard(){
 function clrReg(){
   ['rN','rNo','rTrait','rEff','rCost','rPow'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   const rRar=document.getElementById('rRar');if(rRar)rRar.value='SR';
+  const rBlk=document.getElementById('rBlk');if(rBlk)rBlk.value='4';
   rColors=[];rStats={cost:0,power:0,counter:0,life:5};
   document.querySelectorAll('.copt,.popt').forEach(e=>e.classList.remove('sel'));
   document.querySelectorAll('#fCtr .popt[data-val="0"],#fLife .popt[data-val="5"]').forEach(e=>e.classList.add('sel'));
@@ -1413,7 +1385,7 @@ function editCard(id){
   },50);
 }
 async function delCard(id){
-  if(!confirm('削除しますか？'))return;
+  if(!await customConfirm('カードを削除しますか？'))return;
   try{await dbDel('cards',id);_cards=await dbGetAll('cards');delete deck[id];updDkAll();renderMg();doSearch();toast('削除しました');}
   catch(e){toast('❌ 削除エラー');}
 }
@@ -1445,7 +1417,7 @@ async function onImp(e){
       const data=JSON.parse(ev.target.result);
       const cards=Array.isArray(data)?data:(data.cards||[]);
       const decks2=data.decks||[];
-      if(confirm('統合しますか？(OK=統合 キャンセル=置き換え)')){
+      if(await customConfirm('インポート方法を選択してください\n\n統合：既存データに追加\n置き換え：既存データを削除して入替','統合する')){
         const merged=[..._cards];
         cards.forEach(nc=>{
           const i=merged.findIndex(c=>c.id===nc.id);
@@ -1493,11 +1465,13 @@ async function importJsonCards(arr){
     const type=typeMap[d.type]||d.type||'キャラ';
     const parallel=!!(d.name&&(d.name.includes('Alt art')||d.name.includes('パラレル')));
     const ex=exMap.get(id);
-    const nc={id,name:d.name||'',type,color,colors,cost:d.cost||0,power:d.power||0,counter:d.counter||0,
-      life:type==='リーダー'?5:undefined,trait:d.affiliation||d.trait||'',attr:d.attribute||d.attr||'',
+    const rawBlock=d.block_icon||d.blockIcon||id.match(/^OP(\d+)/)?.[1];
+    const blockIcon=rawBlock==='X'||rawBlock==='x'?'X':(parseInt(rawBlock)||4);
+    const nc={id,name:d.name||'',type,color,colors,cost:d.cost??0,power:d.power??0,counter:d.counter??0,
+      life:type==='リーダー'?(d.life??5):undefined,trait:d.affiliation||d.trait||'',attr:d.attribute||d.attr||'',
       effect:d.effect&&d.effect!=='なし'?d.effect:'',rarity:d.rarity||'C',
-      set:id.replace(/-\d+$/,''),emoji:'',parallel,isCustom:true,
-      image:nc.image||ex?.image||null};  // JSONのimageを優先、なければ既存DBのものを引き継ぐ
+      set:id.replace(/-\d+$/,''),blockIcon,emoji:'',parallel,
+      image:d.image||ex?.image||null};
     if(ex)updated++;else added++;
     toSave.push(nc);
   });
