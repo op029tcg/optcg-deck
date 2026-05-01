@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover">
-<title>OP·TCG Builder v2.1.4</title>
+<title>OP·TCG Builder v2.1.5</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
@@ -267,7 +270,7 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Noto Sa
 </div>
 
 <header class="hd">
-  <div class="logo" onclick="resetToSearch()" style="cursor:pointer;touch-action:manipulation"><span>OP</span>·TCG BUILDER <span style="font-size:9px;color:var(--txt3);font-weight:400;letter-spacing:0">v2.1.4</span></div>
+  <div class="logo" onclick="resetToSearch()" style="cursor:pointer;touch-action:manipulation"><span>OP</span>·TCG BUILDER <span style="font-size:9px;color:var(--txt3);font-weight:400;letter-spacing:0">v2.1.5</span></div>
   <button class="hbtn" id="hUnlockBtn" onclick="toggleUnlock()" title="枚数制限解除" style="display:none;font-size:18px">🔒</button>
   <button class="hbtn" id="hDkBtn" onclick="openMDk()" title="デッキ" style="display:none">
     🃏<span class="hbdg v" id="hDkBdg">0</span>
@@ -523,7 +526,7 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Noto Sa
 
 <!-- カスタム確認モーダル (confirm代替) -->
 <div class="modal" id="customConfirmMod" style="z-index:9999;display:none">
-  <div class="mbk" onclick="document.getElementById('customConfirmMod').classList.remove('open');document.getElementById('customConfirmMod').style.display='none'"></div>
+  <div class="mbk" onclick="document.getElementById('ccCancelBtn').click()"></div>
   <div class="mbox" style="max-width:320px;padding:20px 20px 16px">
     <div id="ccMsg" style="font-size:14px;font-weight:700;margin-bottom:16px;white-space:pre-line;line-height:1.6"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -538,7 +541,7 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Noto Sa
   <div class="mbk" onclick="customPromptCancel()"></div>
   <div class="mbox" style="max-width:320px;padding:20px 20px 16px">
     <div id="cpTitle" style="font-size:15px;font-weight:700;margin-bottom:14px"></div>
-    <input id="cpInput" type="text" style="width:100%;box-sizing:border-box;padding:10px 12px;font-size:15px;border-radius:10px;border:1px solid var(--brd);background:var(--sur2);color:var(--txt1);outline:none;margin-bottom:14px" autocomplete="off" spellcheck="false">
+    <input id="cpInput" type="text" style="width:100%;box-sizing:border-box;padding:10px 12px;font-size:15px;border-radius:10px;border:1px solid var(--brd);background:var(--sur2);color:var(--txt);outline:none;margin-bottom:14px" autocomplete="off" spellcheck="false">
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btns" onclick="customPromptCancel()">キャンセル</button>
       <button class="btn btnp" id="cpOkBtn">OK</button>
@@ -572,7 +575,7 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Noto Sa
 
 <script>
 // ════════════════════════════════════════════════════════
-// OP·TCG BUILDER v2.1.4 — IndexedDB対応
+// OP·TCG BUILDER v2.1.5 — IndexedDB対応
 // DB: optcg_db v1
 //   stores: cards(keyPath:id), decks(keyPath:id), ui(keyPath:key)
 // ════════════════════════════════════════════════════════
